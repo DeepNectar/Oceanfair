@@ -364,14 +364,223 @@ export default function EtaInfo() {
     XLSX.writeFile(wb, 'ETA_Import_Template.xlsx');
   };
 
-  // ========== SEND BUTTON (placeholder — code to be provided) ==========
+  // ========== SEND BUTTON — ETA MAILER ==========
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailRows, setEmailRows] = useState<
+    { sr: number; vessel: string; port: string; eta: string; remarks: string }[]
+  >([]);
+  const [isDeepLap, setIsDeepLap] = useState(false);
+
+  // Recipients — leave blank for now (user will provide later)
+  const RECIPIENTS = {
+    to: '',
+    cc: '',
+  };
+
+  // Port → color class map (mirrors VBA)
+  const PORT_COLOR_MAP: Record<string, string> = {
+    FUJAIRAH: '#B71C1C',
+    DIBBA: '#E65100',
+    'KHOR FAKKAN': '#4A148C',
+    KFK: '#4A148C',
+    'MINA SAQR': '#880E4F',
+    'RAS AL KHAIMAH': '#880E4F',
+    DUBAI: '#0D47A1',
+    'JEBEL ALI': '#1B5E20',
+    'JEBAL ALI': '#1B5E20',
+    'DUBAI MARITIME CITY': '#004D40',
+    DMC: '#004D40',
+    SHARJAH: '#F57F17',
+    'HAMRIYAH SHARJAH': '#F57F17',
+    'ABU DHABI': '#4E342E',
+    'ABU DHABI PORT': '#4E342E',
+    'KHALIFA PORT': '#4E342E',
+    'KHALID PORT': '#F57F17',
+    'DRY DOCK': '#00695C',
+  };
+
+  const detectDeepLap = () => {
+    const params = new URLSearchParams(window.location.search);
+    const qDevice = (params.get('device') || '').toUpperCase();
+    if (qDevice.includes('DEEP-LAP') || qDevice.includes('DEEPLAP')) return true;
+    const ua = (navigator.userAgent || '').toUpperCase();
+    if (ua.includes('DEEP-LAP') || ua.includes('DEEPLAP') || ua.includes('DEEP_LAP')) return true;
+    const platform = (navigator.platform || '').toUpperCase();
+    if (platform.includes('DEEP-LAP') || platform.includes('DEEPLAP')) return true;
+    return false;
+  };
+
   const handleSend = () => {
     if (data.length === 0) {
-      showNotification('error', 'No data to send. Please add entries or import from Excel first.');
+      showNotification(
+        'error',
+        'No data to send. Please add entries or import from Excel first.'
+      );
       return;
     }
-    // TODO: Replace this with the actual send logic once code is provided
-    showNotification('success', `Send button clicked! ${data.length} entries ready. Awaiting send logic implementation.`);
+    // Populate email rows from current data
+    const rows = data.map((d) => ({
+      sr: d.srNo,
+      vessel: d.vesselName,
+      port: d.port,
+      eta: d.etaEtbEtd,
+      remarks: d.remarks,
+    }));
+    setEmailRows(rows);
+    setIsDeepLap(detectDeepLap());
+    setIsEmailModalOpen(true);
+  };
+
+  const loadSampleEmailRows = () => {
+    setEmailRows([
+      { sr: 1, vessel: 'MV OCEAN STAR', port: 'FUJAIRAH', eta: '12-Oct 08:00 / 10:00 / 14:00', remarks: 'Confirm for FFV, Bread & Dairy' },
+      { sr: 2, vessel: 'MT GULF TRADER', port: 'JEBEL ALI', eta: '12-Oct 14:00 / 16:00 / 13-Oct 06:00', remarks: 'Fresh items required' },
+      { sr: 3, vessel: 'MV DESERT PEARL', port: 'ABU DHABI', eta: '13-Oct 06:00 / 08:00 / 18:00', remarks: 'Awaiting agent confirmation' },
+      { sr: 4, vessel: 'MT ARABIAN SEA', port: 'SHARJAH', eta: '13-Oct 10:00 / 12:00 / 14-Oct 02:00', remarks: 'Bread & Dairy arrangement' },
+      { sr: 5, vessel: 'MV CORAL QUEEN', port: 'KHALIFA PORT', eta: '14-Oct 07:00 / 09:00 / 19:00', remarks: 'Confirm FFV' },
+      { sr: 6, vessel: 'MT RAS AL KHAIMAH', port: 'RAS AL KHAIMAH', eta: '14-Oct 15:00 / 17:00 / 15-Oct 05:00', remarks: 'Standard' },
+    ]);
+    showNotification('success', 'Sample ETA rows loaded.');
+  };
+
+  const clearEmailRows = () => {
+    setEmailRows([]);
+    showNotification('success', 'Email rows cleared.');
+  };
+
+  const getPortColor = (port: string) => {
+    const portUpper = (port || '').toString().trim().toUpperCase();
+    return PORT_COLOR_MAP[portUpper] || '#263238';
+  };
+
+  const escapeHtml = (text: string | undefined | null) => {
+    if (text === undefined || text === null) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const buildEtaTableHtml = () => {
+    if (!emailRows.length) {
+      return '<p style="text-align:center;color:#94a3b8;font-style:italic;padding:20px 0;font-family:Inter,sans-serif;font-size:13px;">No ETA rows available.</p>';
+    }
+    let html = '<div style="border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(6,24,43,0.12);border:1px solid rgba(212,175,55,0.3);background:white;margin-bottom:8px;"><table style="border-collapse:collapse;width:100%;font-family:Inter,Arial,sans-serif;"><thead><tr style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 100%);color:#f0d878;">';
+    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">SR#</th>';
+    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">VESSEL NAME</th>';
+    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">PORT</th>';
+    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">ETA · ETB · ETD</th>';
+    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;">REMARKS<span style="display:block;font-size:0.62rem;font-weight:500;letter-spacing:0.08em;color:rgba(203,213,225,0.75);text-transform:none;margin-top:4px;line-height:1.4;">Confirm for FFV, Bread &amp; Dairy arrangement</span></th>';
+    html += '</tr></thead><tbody>';
+    emailRows.forEach((row, idx) => {
+      const portUpper = (row.port || '').toString().toUpperCase();
+      const portColor = PORT_COLOR_MAP[portUpper] || '#263238';
+      const bg = idx % 2 === 1 ? '#fcfbf8' : 'transparent';
+      html += `<tr style="background:${bg};">`;
+      html += `<td style="padding:14px;text-align:center;font-weight:700;color:#d4af37;font-size:0.82rem;background:${idx % 2 === 1 ? '#f7f4e8' : '#fbfaf5'};width:54px;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(String(row.sr))}</td>`;
+      html += `<td style="padding:14px;font-size:0.84rem;color:#1e2e3f;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;font-weight:700;color:#0b2b4a;">${escapeHtml(row.vessel)}</td>`;
+      html += `<td style="padding:14px;text-align:center;font-weight:700;font-size:0.78rem;letter-spacing:0.04em;color:${portColor};border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(row.port)}</td>`;
+      html += `<td style="padding:14px;text-align:center;font-weight:600;color:#0b2b4a;font-size:0.8rem;font-family:Inter,monospace;letter-spacing:0.01em;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(row.eta)}</td>`;
+      html += `<td style="padding:14px;text-align:center;font-size:0.82rem;color:#3e5f7a;font-weight:500;border-bottom:1px solid #eef2f7;">${escapeHtml(row.remarks)}</td>`;
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  };
+
+  const buildEmailBodyHtml = () => {
+    const tableHtml = buildEtaTableHtml();
+    return `
+      <div style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 50%,#0b2b4a 100%);padding:34px 40px 30px;position:relative;overflow:hidden;border-bottom:4px solid #d4af37;">
+        <div style="position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(212,175,55,0.18),transparent 65%);border-radius:50%;pointer-events:none;"></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;position:relative;z-index:1;">
+          <div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#d4af37,#b8942a);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 20px rgba(212,175,55,0.4);color:#0b2b4a;">⚓</div>
+          <div style="display:flex;flex-direction:column;line-height:1.2;">
+            <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;letter-spacing:0.22em;color:#f0d878;text-transform:uppercase;">Oceanfair</span>
+            <span style="font-size:10px;letter-spacing:0.25em;color:rgba(203,213,225,0.65);text-transform:uppercase;font-weight:500;margin-top:3px;">Marine &amp; Ship Supply</span>
+          </div>
+        </div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:30pt;font-weight:800;color:#ffffff;letter-spacing:-0.015em;line-height:1.05;margin:0 0 8px;position:relative;z-index:1;">Vessel <span style="background:linear-gradient(120deg,#f0d878 0%,#d4af37 100%);-webkit-background-clip:text;background-clip:text;color:transparent;">Schedule</span> Update</h1>
+        <div style="font-size:11px;letter-spacing:0.28em;color:rgba(240,216,120,0.85);text-transform:uppercase;font-weight:600;position:relative;z-index:1;">ETA · ETB · ETD Notification</div>
+      </div>
+      <div style="padding:34px 40px 30px;background:#fbfaf7;font-family:'Cormorant Garamond','Times New Roman',serif;">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#0b2b4a;margin-bottom:12px;letter-spacing:-0.01em;">Dear Team,</div>
+        <p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#3e5f7a;margin-bottom:26px;font-weight:400;">
+          Please advise the exact <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">ETA</b> for the below vessels with <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">REMARKS</b> to enable us to arrange the fresh items accordingly.
+        </p>
+        <div style="display:flex;align-items:center;gap:14px;margin:24px 0 22px;">
+          <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent);"></div>
+          <span style="color:#d4af37;font-size:10px;letter-spacing:0.4em;">◆ ◆ ◆</span>
+          <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent);"></div>
+        </div>
+        ${tableHtml}
+      </div>
+      <div style="padding:26px 40px 30px;background:linear-gradient(180deg,#fbfaf7 0%,#f5f0e3 100%);border-top:1px solid rgba(212,175,55,0.25);font-family:Inter,sans-serif;">
+        <div style="display:flex;align-items:flex-start;gap:18px;padding-bottom:20px;margin-bottom:20px;border-bottom:1px dashed rgba(212,175,55,0.35);">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0b2b4a,#123e63);color:#f0d878;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;box-shadow:0 6px 16px rgba(6,24,43,0.25);flex-shrink:0;letter-spacing:0.05em;">OF</div>
+          <div style="flex:1;line-height:1.55;">
+            <div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#0b2b4a;margin-bottom:3px;letter-spacing:-0.01em;">Oceanfair Operations Team</div>
+            <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#d4af37;font-weight:700;margin-bottom:6px;">Vessel Coordination</div>
+            <div style="font-size:11.5px;color:#5b7d9c;line-height:1.6;">
+              <span style="color:#0b2b4a;font-weight:600;">dispatch@oceanfair.com</span> &nbsp;·&nbsp; +971 4 XXX XXXX<br>
+              Dubai · Fujairah · Abu Dhabi — United Arab Emirates
+            </div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#94a3b8;line-height:1.6;text-align:center;letter-spacing:0.02em;font-style:italic;">
+          <b style="color:#64748b;font-style:normal;font-weight:700;letter-spacing:0.08em;">CONFIDENTIAL</b> — This message and any attachments are intended solely for the addressee and may contain proprietary information. If received in error, please notify the sender and delete immediately.
+        </div>
+      </div>
+    `;
+  };
+
+  const getSubjectLine = () => {
+    const today = new Date();
+    const subjectDate = today.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return `ETA/ETB - INFO -- ${subjectDate}`;
+  };
+
+  const dispatchEmail = () => {
+    if (!emailRows.length) {
+      showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
+      return;
+    }
+    const subject = getSubjectLine();
+    openEmailPreviewWindow(subject);
+    if (isDeepLap) {
+      showNotification('error', 'DEEP-LAP — email opened in Display mode (not sent).');
+    } else {
+      showNotification('success', 'Email sent successfully (simulated).');
+    }
+  };
+
+  const openEmailPreviewWindow = (subject: string) => {
+    const bodyHtml = buildEmailBodyHtml();
+    const fullDoc = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#eef2f7;padding:30px 15px;font-family:'Inter',Arial,sans-serif;}
+</style></head><body>
+  <div style="max-width:860px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(6,24,43,0.18);font-family:'Inter',Arial,sans-serif;border:1px solid rgba(212,175,55,0.25);">${bodyHtml}</div>
+</body></html>`;
+    const w = window.open('', '_blank', 'width=960,height=800,scrollbars=yes,resizable=yes');
+    if (w) {
+      w.document.open();
+      w.document.write(fullDoc);
+      w.document.close();
+      w.document.title = subject;
+    } else {
+      showNotification('error', 'Popup blocked. Please allow popups to preview the email.');
+    }
   };
 
   // Build preview grouped list
@@ -1056,6 +1265,97 @@ export default function EtaInfo() {
           </div>
         </div>
       </footer>
+
+      {/* EMAIL PREVIEW MODAL */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#050f1d] to-[#06182b] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-[#D4A843]/20">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#0B1D3A] to-[#1A3A6B] px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-[#D4A843]/20">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#D4A843] to-[#b8942a] flex items-center justify-center text-2xl">
+                  ✉
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-xl">ETA Mailer</h3>
+                  <p className="text-blue-200 text-xs">
+                    {isDeepLap ? 'DEEP-LAP Device · Display Only' : 'Standard Device · Send Enabled'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEmailModalOpen(false)}
+                className="text-white/70 hover:text-white transition-colors text-2xl"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            {/* Toolbar */}
+            <div className="bg-[#0a1a2f]/50 px-6 py-4 flex flex-wrap items-center gap-3 border-b border-[#D4A843]/10">
+              <button
+                onClick={dispatchEmail}
+                className="bg-gradient-to-r from-[#D4A843] to-[#b8942a] hover:from-[#e5c452] hover:to-[#D4A843] text-[#0B1D3A] font-bold px-6 py-2.5 rounded-lg shadow-lg transition-all flex items-center gap-2"
+              >
+                <span>✉</span> Build & Dispatch
+              </button>
+              <button
+                onClick={loadSampleEmailRows}
+                className="bg-white/5 hover:bg-white/10 text-white border border-white/20 hover:border-[#D4A843]/40 px-5 py-2.5 rounded-lg transition-all flex items-center gap-2"
+              >
+                <span>◈</span> Load Sample Rows
+              </button>
+              <button
+                onClick={clearEmailRows}
+                className="bg-transparent hover:bg-red-500/10 text-gray-400 hover:text-red-400 border border-gray-400/20 hover:border-red-400/40 px-5 py-2.5 rounded-lg transition-all flex items-center gap-2"
+              >
+                <span>✕</span> Clear
+              </button>
+              <div className={`ml-auto px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 border ${
+                isDeepLap
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              }`}>
+                <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                {isDeepLap ? 'Display Mode' : 'Send Mode'}
+              </div>
+            </div>
+
+            {/* Email Preview Content */}
+            <div className="flex-1 overflow-y-auto p-6 bg-[#eef2f7]">
+              <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border border-[#D4A843]/25">
+                {/* Email Meta */}
+                <div className="bg-[#06182b]/70 px-6 py-4 border-b border-[#D4A843]/10 text-sm space-y-2">
+                  <div className="flex gap-3">
+                    <span className="font-bold text-[#D4A843] text-xs uppercase tracking-wider min-w-[60px]">To</span>
+                    <span className="text-gray-300 font-medium">
+                      {RECIPIENTS.to || <span className="text-gray-500 italic">— (To be configured)</span>}
+                    </span>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="font-bold text-[#D4A843] text-xs uppercase tracking-wider min-w-[60px]">CC</span>
+                    <span className="text-gray-300 font-medium">
+                      {RECIPIENTS.cc || <span className="text-gray-500 italic">— (To be configured)</span>}
+                    </span>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="font-bold text-[#D4A843] text-xs uppercase tracking-wider min-w-[60px]">Subject</span>
+                    <span className="text-[#f0d878] font-semibold">{getSubjectLine()}</span>
+                  </div>
+                </div>
+
+                {/* Email Body */}
+                <div className="max-h-[600px] overflow-y-auto">
+                  <div
+                    className="email-preview-content"
+                    dangerouslySetInnerHTML={{ __html: buildEmailBodyHtml() }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
