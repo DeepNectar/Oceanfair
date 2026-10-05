@@ -547,8 +547,21 @@ export default function EtaInfo() {
       const plainTextBody = buildPlainTextBody();
       const mailtoLink = `mailto:${RECIPIENTS.to}?cc=${RECIPIENTS.cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
       
-      // Open the mailto link (triggers default email app)
-      window.location.href = mailtoLink;
+      // Close the modal first
+      setIsEmailModalOpen(false);
+      
+      // Create a temporary anchor element and trigger click
+      // This is more reliable than window.location.href for mailto:
+      const link = document.createElement('a');
+      link.href = mailtoLink;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 100);
       
       showNotification('success', 'Opening your default email app...');
     }
