@@ -6,9 +6,7 @@ type EtaEntry = {
   srNo: number;
   vesselName: string;
   port: string;
-  eta: string;
-  etb: string;
-  etd: string;
+  etaEtbEtd: string;
   remarks: string;
 };
 
@@ -105,47 +103,23 @@ export default function EtaInfo() {
               {/* Table Header with merged sub-header */}
               <thead>
                 <tr className="bg-[#0B1D3A] text-white">
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
                     SR#
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
                     VESSEL NAME
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
                     PORT
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider border-r border-white/10" colSpan={3}>
+                  <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider border-r border-white/10">
                     ETA - ETB - ETD
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
                     REMARKS (Confirm for FFV, Bread &amp; Dairy arrangement)
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider">
+                  <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider">
                     ACTION
-                  </th>
-                </tr>
-                {/* Sub-header row */}
-                <tr className="bg-[#1A3A6B] text-blue-100">
-                  <th className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    &nbsp;
-                  </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    &nbsp;
-                  </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    &nbsp;
-                  </th>
-                  <th className="px-4 py-2 text-center text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    ETA
-                  </th>
-                  <th className="px-4 py-2 text-center text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    ETB
-                  </th>
-                  <th className="px-4 py-2 text-center text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
-                    ETD
-                  </th>
-                  <th className="px-4 py-2 text-left text-[10px] font-medium tracking-normal border-r border-white/10" colSpan={2}>
-                    &nbsp;
                   </th>
                 </tr>
               </thead>
@@ -154,7 +128,7 @@ export default function EtaInfo() {
               <tbody className="divide-y divide-gray-100">
                 {filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
                       <i className="fa-solid fa-inbox text-4xl mb-3 block"></i>
                       <p className="text-sm">No entries found matching your search.</p>
                     </td>
@@ -180,23 +154,8 @@ export default function EtaInfo() {
                           {item.port}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-center border-r border-gray-100">
-                        <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium">
-                          <i className="fa-regular fa-calendar text-[10px]"></i>
-                          {item.eta}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center border-r border-gray-100">
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-medium">
-                          <i className="fa-regular fa-calendar text-[10px]"></i>
-                          {item.etb}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center border-r border-gray-100">
-                        <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-medium">
-                          <i className="fa-regular fa-calendar text-[10px]"></i>
-                          {item.etd}
-                        </span>
+                      <td className="px-4 py-4 text-sm text-center text-gray-700 border-r border-gray-100">
+                        {item.etaEtbEtd}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 border-r border-gray-100 max-w-xs">
                         <span className="inline-block">
