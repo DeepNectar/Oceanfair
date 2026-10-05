@@ -556,6 +556,81 @@ export default function EtaInfo() {
     return `mailto:${toPart}?${params.toString()}`;
   };
 
+  const openEmailWithCopyButton = (subject: string) => {
+    const htmlEmail = buildFullHtmlEmail();
+    const mailtoLink = buildMailtoLink(subject);
+    
+    const emailWindow = window.open('', '_blank', 'width=960,height=800,scrollbars=yes,resizable=yes');
+    
+    if (emailWindow) {
+      // Create HTML with a copy button
+      const fullHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(subject)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#eef2f7;padding:20px;font-family:'Inter',Arial,sans-serif;}
+  .toolbar{max-width:860px;margin:0 auto 20px;display:flex;gap:10px;justify-content:center;}
+  .btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:all 0.2s;}
+  .btn-copy{background:linear-gradient(135deg,#d4af37,#b8942a);color:#0b2b4a;box-shadow:0 4px 12px rgba(212,175,55,0.3);}
+  .btn-copy:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(212,175,55,0.4);}
+  .btn-open{background:#0b2b4a;color:#f0d878;box-shadow:0 4px 12px rgba(11,43,74,0.3);}
+  .btn-open:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(11,43,74,0.4);}
+  .email-content{max-width:860px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(6,24,43,0.18);border:1px solid rgba(212,175,55,0.25);}
+  .instructions{max-width:860px;margin:20px auto 0;padding:16px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;text-align:center;font-size:14px;color:#856404;}
+  .instructions b{color:#0b2b4a;}
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn btn-copy" onclick="copyEmail()">📋 Copy Email to Clipboard</button>
+    <button class="btn btn-open" onclick="openEmailClient()">✉ Open Email Client</button>
+  </div>
+  <div class="instructions">
+    <b>Step 1:</b> Click "Copy Email to Clipboard" &nbsp;|&nbsp; <b>Step 2:</b> Click "Open Email Client" &nbsp;|&nbsp; <b>Step 3:</b> Paste (Ctrl+V / Cmd+V) in your email body
+  </div>
+  <div class="email-content" id="emailContent">${htmlEmail}</div>
+  <script>
+    function copyEmail() {
+      const emailContent = document.getElementById('emailContent');
+      const range = document.createRange();
+      range.selectNodeContents(emailContent);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      try {
+        document.execCommand('copy');
+        alert('✓ Email copied to clipboard! Now click "Open Email Client" and paste (Ctrl+V).');
+      } catch (err) {
+        alert('Copy failed. Please manually select all content (Ctrl+A) and copy (Ctrl+C).');
+      }
+      
+      selection.removeAllRanges();
+    }
+    
+    function openEmailClient() {
+      window.location.href = '${mailtoLink}';
+    }
+  </script>
+</body>
+</html>`;
+      
+      emailWindow.document.open();
+      emailWindow.document.write(fullHtml);
+      emailWindow.document.close();
+      emailWindow.document.title = subject;
+      
+      showNotification('success', 'Email window opened! Follow the 3 steps to send.');
+    } else {
+      showNotification('error', 'Popup blocked. Please allow popups to open the email.');
+    }
+  };
+
   const dispatchEmail = () => {
     if (!emailRows.length) {
       showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
@@ -568,63 +643,13 @@ export default function EtaInfo() {
       openEmailPreviewWindow(subject);
       showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
-      // Send Directly mode - copies HTML to clipboard + opens default email app
-      const htmlEmail = buildFullHtmlEmail();
-      const plainTextBody = buildPlainTextBody();
-      const mailtoLink = buildMailtoLink(subject);
-      
-      // Close the modal first
+      // Send Directly mode - opens HTML email with copy button
       setIsEmailModalOpen(false);
       
-      // Wait for modal to close, then copy HTML to clipboard and open email app
       setTimeout(() => {
-        // Try to copy HTML to clipboard (works in modern browsers)
-        if (navigator.clipboard && window.ClipboardItem) {
-          const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
-          const textBlob = new Blob([plainTextBody], { type: 'text/plain' });
-          const clipboardItem = new ClipboardItem({
-            'text/html': htmlBlob,
-            'text/plain': textBlob,
-          });
-          
-          navigator.clipboard.write([clipboardItem]).then(() => {
-            // HTML copied successfully - now open email app
-            const link = document.createElement('a');
-            link.href = mailtoLink;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(() => document.body.removeChild(link), 100);
-            
-            showNotification('success', '✓ HTML email copied! Paste (Ctrl+V / Cmd+V) in your email body.');
-          }).catch(() => {
-            // Clipboard failed - fallback to plain text mailto
-            fallbackPlainMailto(subject, plainTextBody, mailtoLink);
-          });
-        } else {
-          // Clipboard API not available - fallback to plain text
-          fallbackPlainMailto(subject, plainTextBody, mailtoLink);
-        }
+        openEmailWithCopyButton(subject);
       }, 300);
     }
-  };
-
-  const fallbackPlainMailto = (subject: string, plainTextBody: string, mailtoLink: string) => {
-    const params = new URLSearchParams();
-    if (RECIPIENTS.cc) params.set('cc', RECIPIENTS.cc);
-    params.set('subject', subject);
-    params.set('body', plainTextBody);
-    const toPart = RECIPIENTS.to || '';
-    const fullMailto = `mailto:${toPart}?${params.toString()}`;
-    
-    const link = document.createElement('a');
-    link.href = fullMailto;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => document.body.removeChild(link), 100);
-    
-    showNotification('success', 'Opening your default email app with plain text body...');
   };
 
   const openEmailPreviewWindow = (subject: string) => {
