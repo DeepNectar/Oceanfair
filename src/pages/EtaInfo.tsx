@@ -508,6 +508,29 @@ export default function EtaInfo() {
     return `ETA/ETB - INFO -- ${subjectDate}`;
   };
 
+  const buildPlainTextBody = () => {
+    let text = 'Dear Team,\n\n';
+    text += 'Please advise the exact ETA for the below vessels with REMARKS to enable us to arrange the fresh items accordingly.\n\n';
+    text += '═══════════════════════════════════════════════════════\n\n';
+    
+    // Table header
+    text += 'SR#\tVESSEL NAME\tPORT\tETA · ETB · ETD\tREMARKS\n';
+    text += '─────────────────────────────────────────────────────────────────────────────────────────────────────────\n';
+    
+    // Table rows
+    emailRows.forEach((row) => {
+      text += `${row.sr}\t${row.vessel}\t${row.port}\t${row.eta}\t${row.remarks}\n`;
+    });
+    
+    text += '\n═══════════════════════════════════════════════════════\n\n';
+    text += 'Best regards,\n';
+    text += 'Oceanfair Operations Team\n';
+    text += 'Vessel Coordination\n';
+    text += 'Dubai · Fujairah · Abu Dhabi — United Arab Emirates\n';
+    
+    return text;
+  };
+
   const dispatchEmail = () => {
     if (!emailRows.length) {
       showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
@@ -516,11 +539,18 @@ export default function EtaInfo() {
     const subject = getSubjectLine();
     
     if (dispatchMode === 'display') {
+      // Open & Display mode - opens HTML preview window
       openEmailPreviewWindow(subject);
       showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
-      openEmailPreviewWindow(subject);
-      showNotification('success', 'Email sent successfully (simulated).');
+      // Send Directly mode - opens default email app via mailto:
+      const plainTextBody = buildPlainTextBody();
+      const mailtoLink = `mailto:${RECIPIENTS.to}?cc=${RECIPIENTS.cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
+      
+      // Open the mailto link (triggers default email app)
+      window.location.href = mailtoLink;
+      
+      showNotification('success', 'Opening your default email app...');
     }
   };
 
