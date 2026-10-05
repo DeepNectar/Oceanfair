@@ -543,25 +543,27 @@ export default function EtaInfo() {
       openEmailPreviewWindow(subject);
       showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
-      // Send Directly mode - opens default email app via mailto:
+      // Send Directly mode - opens default email app (Outlook, Gmail, Apple Mail, etc.)
       const plainTextBody = buildPlainTextBody();
       const mailtoLink = `mailto:${RECIPIENTS.to}?cc=${RECIPIENTS.cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
       
       // Close the modal first
       setIsEmailModalOpen(false);
       
-      // Create a temporary anchor element and trigger click
-      // This is more reliable than window.location.href for mailto:
-      const link = document.createElement('a');
-      link.href = mailtoLink;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      
-      // Clean up
+      // Wait for modal to close completely, then trigger mailto
       setTimeout(() => {
-        document.body.removeChild(link);
-      }, 100);
+        // Create temporary anchor element for reliable mailto trigger
+        const link = document.createElement('a');
+        link.href = mailtoLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up after a short delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+      }, 300);
       
       showNotification('success', 'Opening your default email app...');
     }
