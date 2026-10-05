@@ -364,6 +364,16 @@ export default function EtaInfo() {
     XLSX.writeFile(wb, 'ETA_Import_Template.xlsx');
   };
 
+  // ========== SEND BUTTON (placeholder — code to be provided) ==========
+  const handleSend = () => {
+    if (data.length === 0) {
+      showNotification('error', 'No data to send. Please add entries or import from Excel first.');
+      return;
+    }
+    // TODO: Replace this with the actual send logic once code is provided
+    showNotification('success', `Send button clicked! ${data.length} entries ready. Awaiting send logic implementation.`);
+  };
+
   // Build preview grouped list
   const buildPreviewGroups = () => {
     if (!importPreview) return [];
@@ -469,6 +479,12 @@ export default function EtaInfo() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleSend}
+                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold px-5 py-3 rounded-lg shadow-lg transition-all flex items-center gap-2"
+              >
+                <i className="fa-solid fa-paper-plane"></i> Send
+              </button>
               <button
                 onClick={handleImportClick}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-lg shadow-lg transition-all flex items-center gap-2"
