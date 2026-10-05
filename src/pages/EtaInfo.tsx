@@ -531,6 +531,31 @@ export default function EtaInfo() {
     return text;
   };
 
+  const buildFullHtmlEmail = () => {
+    const bodyHtml = buildEmailBodyHtml();
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#ffffff;padding:0;font-family:'Inter',Arial,sans-serif;}
+</style>
+</head>
+<body>${bodyHtml}</body>
+</html>`;
+  };
+
+  const buildMailtoLink = (subject: string) => {
+    // Properly construct mailto URL to avoid subject leaking into CC
+    const toPart = RECIPIENTS.to || '';
+    const params = new URLSearchParams();
+    if (RECIPIENTS.cc) params.set('cc', RECIPIENTS.cc);
+    params.set('subject', subject);
+    return `mailto:${toPart}?${params.toString()}`;
+  };
+
   const dispatchEmail = () => {
     if (!emailRows.length) {
       showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
@@ -543,30 +568,63 @@ export default function EtaInfo() {
       openEmailPreviewWindow(subject);
       showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
-      // Send Directly mode - opens default email app (Outlook, Gmail, Apple Mail, etc.)
+      // Send Directly mode - copies HTML to clipboard + opens default email app
+      const htmlEmail = buildFullHtmlEmail();
       const plainTextBody = buildPlainTextBody();
-      const mailtoLink = `mailto:${RECIPIENTS.to}?cc=${RECIPIENTS.cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
+      const mailtoLink = buildMailtoLink(subject);
       
       // Close the modal first
       setIsEmailModalOpen(false);
       
-      // Wait for modal to close completely, then trigger mailto
+      // Wait for modal to close, then copy HTML to clipboard and open email app
       setTimeout(() => {
-        // Create temporary anchor element for reliable mailto trigger
-        const link = document.createElement('a');
-        link.href = mailtoLink;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        
-        // Clean up after a short delay
-        setTimeout(() => {
-          document.body.removeChild(link);
-        }, 100);
+        // Try to copy HTML to clipboard (works in modern browsers)
+        if (navigator.clipboard && window.ClipboardItem) {
+          const htmlBlob = new Blob([htmlEmail], { type: 'text/html' });
+          const textBlob = new Blob([plainTextBody], { type: 'text/plain' });
+          const clipboardItem = new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob,
+          });
+          
+          navigator.clipboard.write([clipboardItem]).then(() => {
+            // HTML copied successfully - now open email app
+            const link = document.createElement('a');
+            link.href = mailtoLink;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => document.body.removeChild(link), 100);
+            
+            showNotification('success', '✓ HTML email copied! Paste (Ctrl+V / Cmd+V) in your email body.');
+          }).catch(() => {
+            // Clipboard failed - fallback to plain text mailto
+            fallbackPlainMailto(subject, plainTextBody, mailtoLink);
+          });
+        } else {
+          // Clipboard API not available - fallback to plain text
+          fallbackPlainMailto(subject, plainTextBody, mailtoLink);
+        }
       }, 300);
-      
-      showNotification('success', 'Opening your default email app...');
     }
+  };
+
+  const fallbackPlainMailto = (subject: string, plainTextBody: string, mailtoLink: string) => {
+    const params = new URLSearchParams();
+    if (RECIPIENTS.cc) params.set('cc', RECIPIENTS.cc);
+    params.set('subject', subject);
+    params.set('body', plainTextBody);
+    const toPart = RECIPIENTS.to || '';
+    const fullMailto = `mailto:${toPart}?${params.toString()}`;
+    
+    const link = document.createElement('a');
+    link.href = fullMailto;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => document.body.removeChild(link), 100);
+    
+    showNotification('success', 'Opening your default email app with plain text body...');
   };
 
   const openEmailPreviewWindow = (subject: string) => {
