@@ -631,6 +631,36 @@ export default function EtaInfo() {
     }
   };
 
+  const downloadEmlFile = (subject: string) => {
+    const htmlEmail = buildFullHtmlEmail();
+    
+    // Create .eml file format (MIME format for email)
+    const emlContent = `From: Oceanfair Operations <dispatch@oceanfair.com>
+To: ${RECIPIENTS.to || ''}
+CC: ${RECIPIENTS.cc || ''}
+Subject: ${subject}
+Date: ${new Date().toUTCString()}
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+
+${htmlEmail}`;
+
+    // Create blob and download
+    const blob = new Blob([emlContent], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ETA_Info_${new Date().toISOString().split('T')[0]}.eml`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
+
   const dispatchEmail = () => {
     if (!emailRows.length) {
       showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
@@ -643,11 +673,12 @@ export default function EtaInfo() {
       openEmailPreviewWindow(subject);
       showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
-      // Send Directly mode - opens HTML email with copy button
+      // Send Directly mode - downloads .eml file that opens in default email client with HTML
       setIsEmailModalOpen(false);
       
       setTimeout(() => {
-        openEmailWithCopyButton(subject);
+        downloadEmlFile(subject);
+        showNotification('success', '✓ Email file downloaded! It will open automatically in your default email app with full HTML formatting.');
       }, 300);
     }
   };
