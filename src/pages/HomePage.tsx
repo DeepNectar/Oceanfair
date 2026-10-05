@@ -17,15 +17,15 @@ export default function HomePage() {
           <div className="flex items-center justify-between h-20">
             {/* Logo & Company Name */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border-2 border-[#D4A843]/50">
+              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-[#D4A843]/50 shadow-lg">
                 <img
-                  src="https://drive.google.com/uc?export=view&id=1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw"
-                  alt="Ocean Fair Logo"
-                  className="w-12 h-12 object-contain"
+                  src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                  alt="Ocean Fair International Group FZE Logo"
+                  className="w-14 h-14 object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.parentElement!.innerHTML = '<span class="text-[#D4A843] font-bold text-lg">OF</span>';
+                    target.onerror = null;
+                    target.src = "https://lh3.googleusercontent.com/d/1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw";
                   }}
                 />
               </div>
@@ -52,6 +52,16 @@ export default function HomePage() {
           }}></div>
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          {/* Large Logo */}
+          <div className="flex justify-center mb-8">
+            <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border-2 border-[#D4A843]/40 shadow-2xl">
+              <img
+                src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                alt="Ocean Fair International Group FZE"
+                className="w-24 h-24 md:w-32 md:h-32 object-contain"
+              />
+            </div>
+          </div>
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
             <span className="w-2 h-2 bg-[#D4A843] rounded-full"></span>
             <span className="text-blue-100 text-sm font-medium">Welcome to your procurement dashboard</span>
@@ -131,8 +141,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-[#D4A843]/30">
-                <span className="text-[#D4A843] font-bold text-sm">OF</span>
+              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-[#D4A843]/30">
+                <img
+                  src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                  alt="Ocean Fair Logo"
+                  className="w-9 h-9 object-contain"
+                />
               </div>
               <div>
                 <p className="font-semibold text-sm">Ocean Fair International Group FZE</p>
