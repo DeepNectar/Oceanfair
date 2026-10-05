@@ -19,14 +19,9 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-[#D4A843]/50 shadow-lg">
                 <img
-                  src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                  src="https://lh3.googleusercontent.com/d/1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw"
                   alt="Ocean Fair International Group FZE Logo"
                   className="w-14 h-14 object-contain"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = "https://lh3.googleusercontent.com/d/1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw";
-                  }}
                 />
               </div>
               <div>
@@ -56,7 +51,7 @@ export default function HomePage() {
           <div className="flex justify-center mb-8">
             <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border-2 border-[#D4A843]/40 shadow-2xl">
               <img
-                src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                src="https://lh3.googleusercontent.com/d/1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw"
                 alt="Ocean Fair International Group FZE"
                 className="w-24 h-24 md:w-32 md:h-32 object-contain"
               />
@@ -143,7 +138,7 @@ export default function HomePage() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-[#D4A843]/30">
                 <img
-                  src="https://image.qwenlm.ai/generated-images/7ae76d05-28af-4a87-952f-4b24a40a2cd7/_result.png"
+                  src="https://lh3.googleusercontent.com/d/1WBc2Su-36a-le49VAP9rS4pRCOjO1qxw"
                   alt="Ocean Fair Logo"
                   className="w-9 h-9 object-contain"
                 />
