@@ -369,7 +369,7 @@ export default function EtaInfo() {
   const [emailRows, setEmailRows] = useState<
     { sr: number; vessel: string; port: string; eta: string; remarks: string }[]
   >([]);
-  const [isDeepLap, setIsDeepLap] = useState(false);
+  const [dispatchMode, setDispatchMode] = useState<'send' | 'display'>('send');
 
   // Recipients — leave blank for now (user will provide later)
   const RECIPIENTS = {
@@ -399,17 +399,6 @@ export default function EtaInfo() {
     'DRY DOCK': '#00695C',
   };
 
-  const detectDeepLap = () => {
-    const params = new URLSearchParams(window.location.search);
-    const qDevice = (params.get('device') || '').toUpperCase();
-    if (qDevice.includes('DEEP-LAP') || qDevice.includes('DEEPLAP')) return true;
-    const ua = (navigator.userAgent || '').toUpperCase();
-    if (ua.includes('DEEP-LAP') || ua.includes('DEEPLAP') || ua.includes('DEEP_LAP')) return true;
-    const platform = (navigator.platform || '').toUpperCase();
-    if (platform.includes('DEEP-LAP') || platform.includes('DEEPLAP')) return true;
-    return false;
-  };
-
   const handleSend = () => {
     if (data.length === 0) {
       showNotification(
@@ -427,7 +416,6 @@ export default function EtaInfo() {
       remarks: d.remarks,
     }));
     setEmailRows(rows);
-    setIsDeepLap(detectDeepLap());
     setIsEmailModalOpen(true);
   };
 
@@ -446,11 +434,6 @@ export default function EtaInfo() {
   const clearEmailRows = () => {
     setEmailRows([]);
     showNotification('success', 'Email rows cleared.');
-  };
-
-  const getPortColor = (port: string) => {
-    const portUpper = (port || '').toString().trim().toUpperCase();
-    return PORT_COLOR_MAP[portUpper] || '#263238';
   };
 
   const escapeHtml = (text: string | undefined | null) => {
@@ -493,19 +476,12 @@ export default function EtaInfo() {
   const buildEmailBodyHtml = () => {
     const tableHtml = buildEtaTableHtml();
     return `
-      <div style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 50%,#0b2b4a 100%);padding:34px 40px 30px;position:relative;overflow:hidden;border-bottom:4px solid #d4af37;">
+      <div style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 50%,#0b2b4a 100%);padding:38px 40px 32px;position:relative;overflow:hidden;border-bottom:4px solid #d4af37;text-align:center;">
         <div style="position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(212,175,55,0.18),transparent 65%);border-radius:50%;pointer-events:none;"></div>
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;position:relative;z-index:1;">
-          <div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#d4af37,#b8942a);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 20px rgba(212,175,55,0.4);color:#0b2b4a;">⚓</div>
-          <div style="display:flex;flex-direction:column;line-height:1.2;">
-            <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;letter-spacing:0.22em;color:#f0d878;text-transform:uppercase;">Oceanfair</span>
-            <span style="font-size:10px;letter-spacing:0.25em;color:rgba(203,213,225,0.65);text-transform:uppercase;font-weight:500;margin-top:3px;">Marine &amp; Ship Supply</span>
-          </div>
-        </div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:30pt;font-weight:800;color:#ffffff;letter-spacing:-0.015em;line-height:1.05;margin:0 0 8px;position:relative;z-index:1;">Vessel <span style="background:linear-gradient(120deg,#f0d878 0%,#d4af37 100%);-webkit-background-clip:text;background-clip:text;color:transparent;">Schedule</span> Update</h1>
-        <div style="font-size:11px;letter-spacing:0.28em;color:rgba(240,216,120,0.85);text-transform:uppercase;font-weight:600;position:relative;z-index:1;">ETA · ETB · ETD Notification</div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:32pt;font-weight:800;color:#ffffff;letter-spacing:-0.015em;line-height:1.05;margin:0 0 10px;position:relative;z-index:1;">Vessel <span style="background:linear-gradient(120deg,#f0d878 0%,#d4af37 100%);-webkit-background-clip:text;background-clip:text;color:transparent;">Schedule</span> Update</h1>
+        <div style="font-size:11px;letter-spacing:0.32em;color:rgba(240,216,120,0.85);text-transform:uppercase;font-weight:600;position:relative;z-index:1;">ETA · ETB · ETD Notification</div>
       </div>
-      <div style="padding:34px 40px 30px;background:#fbfaf7;font-family:'Cormorant Garamond','Times New Roman',serif;">
+      <div style="padding:34px 40px 36px;background:#fbfaf7;font-family:'Cormorant Garamond','Times New Roman',serif;">
         <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#0b2b4a;margin-bottom:12px;letter-spacing:-0.01em;">Dear Team,</div>
         <p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#3e5f7a;margin-bottom:26px;font-weight:400;">
           Please advise the exact <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">ETA</b> for the below vessels with <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">REMARKS</b> to enable us to arrange the fresh items accordingly.
@@ -517,22 +493,7 @@ export default function EtaInfo() {
         </div>
         ${tableHtml}
       </div>
-      <div style="padding:26px 40px 30px;background:linear-gradient(180deg,#fbfaf7 0%,#f5f0e3 100%);border-top:1px solid rgba(212,175,55,0.25);font-family:Inter,sans-serif;">
-        <div style="display:flex;align-items:flex-start;gap:18px;padding-bottom:20px;margin-bottom:20px;border-bottom:1px dashed rgba(212,175,55,0.35);">
-          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0b2b4a,#123e63);color:#f0d878;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;box-shadow:0 6px 16px rgba(6,24,43,0.25);flex-shrink:0;letter-spacing:0.05em;">OF</div>
-          <div style="flex:1;line-height:1.55;">
-            <div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#0b2b4a;margin-bottom:3px;letter-spacing:-0.01em;">Oceanfair Operations Team</div>
-            <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#d4af37;font-weight:700;margin-bottom:6px;">Vessel Coordination</div>
-            <div style="font-size:11.5px;color:#5b7d9c;line-height:1.6;">
-              <span style="color:#0b2b4a;font-weight:600;">dispatch@oceanfair.com</span> &nbsp;·&nbsp; +971 4 XXX XXXX<br>
-              Dubai · Fujairah · Abu Dhabi — United Arab Emirates
-            </div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:#94a3b8;line-height:1.6;text-align:center;letter-spacing:0.02em;font-style:italic;">
-          <b style="color:#64748b;font-style:normal;font-weight:700;letter-spacing:0.08em;">CONFIDENTIAL</b> — This message and any attachments are intended solely for the addressee and may contain proprietary information. If received in error, please notify the sender and delete immediately.
-        </div>
-      </div>
+      <div style="height:6px;background:linear-gradient(90deg,#0b2b4a 0%,#d4af37 50%,#0b2b4a 100%);"></div>
     `;
   };
 
@@ -553,10 +514,12 @@ export default function EtaInfo() {
       return;
     }
     const subject = getSubjectLine();
-    openEmailPreviewWindow(subject);
-    if (isDeepLap) {
-      showNotification('error', 'DEEP-LAP — email opened in Display mode (not sent).');
+    
+    if (dispatchMode === 'display') {
+      openEmailPreviewWindow(subject);
+      showNotification('success', 'Email opened in Display mode — review & send manually.');
     } else {
+      openEmailPreviewWindow(subject);
       showNotification('success', 'Email sent successfully (simulated).');
     }
   };
@@ -1279,7 +1242,7 @@ export default function EtaInfo() {
                 <div>
                   <h3 className="text-white font-bold text-xl">ETA Mailer</h3>
                   <p className="text-blue-200 text-xs">
-                    {isDeepLap ? 'DEEP-LAP Device · Display Only' : 'Standard Device · Send Enabled'}
+                    Choose your dispatch method — send directly or open to review manually.
                   </p>
                 </div>
               </div>
@@ -1291,34 +1254,52 @@ export default function EtaInfo() {
               </button>
             </div>
 
-            {/* Toolbar */}
-            <div className="bg-[#0a1a2f]/50 px-6 py-4 flex flex-wrap items-center gap-3 border-b border-[#D4A843]/10">
+            {/* Mode Selector Chips */}
+            <div className="bg-[#0a1a2f]/50 px-6 py-3 flex flex-wrap items-center gap-3 border-b border-[#D4A843]/10">
+              <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#06182b]/70 border border-[#D4A843]/20">
+                <button
+                  onClick={() => setDispatchMode('send')}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                    dispatchMode === 'send'
+                      ? 'bg-gradient-to-r from-[#D4A843] to-[#b8942a] text-[#0B1D3A] shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${dispatchMode === 'send' ? 'bg-[#0B1D3A]' : 'bg-current'}`}></span>
+                  Send Directly
+                </button>
+                <button
+                  onClick={() => setDispatchMode('display')}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                    dispatchMode === 'display'
+                      ? 'bg-gradient-to-r from-[#D4A843] to-[#b8942a] text-[#0B1D3A] shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${dispatchMode === 'display' ? 'bg-[#0B1D3A]' : 'bg-current'}`}></span>
+                  Open &amp; Display
+                </button>
+              </div>
+
+              {/* Toolbar Buttons */}
               <button
                 onClick={dispatchEmail}
-                className="bg-gradient-to-r from-[#D4A843] to-[#b8942a] hover:from-[#e5c452] hover:to-[#D4A843] text-[#0B1D3A] font-bold px-6 py-2.5 rounded-lg shadow-lg transition-all flex items-center gap-2"
+                className="bg-gradient-to-r from-[#D4A843] to-[#b8942a] hover:from-[#e5c452] hover:to-[#D4A843] text-[#0B1D3A] font-bold px-5 py-2.5 rounded-lg shadow-lg transition-all flex items-center gap-2 ml-auto"
               >
-                <span>✉</span> Build & Dispatch
+                <span>✉</span> {dispatchMode === 'send' ? 'Send Email' : 'Open & Display'}
               </button>
               <button
                 onClick={loadSampleEmailRows}
-                className="bg-white/5 hover:bg-white/10 text-white border border-white/20 hover:border-[#D4A843]/40 px-5 py-2.5 rounded-lg transition-all flex items-center gap-2"
+                className="bg-white/5 hover:bg-white/10 text-white border border-white/20 hover:border-[#D4A843]/40 px-4 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-semibold"
               >
-                <span>◈</span> Load Sample Rows
+                <span>◈</span> Load Sample
               </button>
               <button
                 onClick={clearEmailRows}
-                className="bg-transparent hover:bg-red-500/10 text-gray-400 hover:text-red-400 border border-gray-400/20 hover:border-red-400/40 px-5 py-2.5 rounded-lg transition-all flex items-center gap-2"
+                className="bg-transparent hover:bg-red-500/10 text-gray-400 hover:text-red-400 border border-gray-400/20 hover:border-red-400/40 px-4 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-semibold"
               >
                 <span>✕</span> Clear
               </button>
-              <div className={`ml-auto px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 border ${
-                isDeepLap
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-              }`}>
-                <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
-                {isDeepLap ? 'Display Mode' : 'Send Mode'}
-              </div>
             </div>
 
             {/* Email Preview Content */}
