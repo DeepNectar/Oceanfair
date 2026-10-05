@@ -12,68 +12,7 @@ type EtaEntry = {
   remarks: string;
 };
 
-const initialData: EtaEntry[] = [
-  {
-    id: 1,
-    srNo: 1,
-    vesselName: 'MSC ARIES',
-    port: 'Jebel Ali, UAE',
-    eta: '15 Nov 2026',
-    etb: '16 Nov 2026',
-    etd: '18 Nov 2026',
-    remarks: 'FFV confirmed',
-  },
-  {
-    id: 2,
-    srNo: 2,
-    vesselName: 'MAERSK SENTOSA',
-    port: 'Jebel Ali, UAE',
-    eta: '18 Nov 2026',
-    etb: '19 Nov 2026',
-    etd: '21 Nov 2026',
-    remarks: 'Bread & Dairy pending',
-  },
-  {
-    id: 3,
-    srNo: 3,
-    vesselName: 'CMA CGM MARCO POLO',
-    port: 'Khalifa Port, Abu Dhabi',
-    eta: '20 Nov 2026',
-    etb: '21 Nov 2026',
-    etd: '23 Nov 2026',
-    remarks: 'All confirmed',
-  },
-  {
-    id: 4,
-    srNo: 4,
-    vesselName: 'EVER GIVEN',
-    port: 'Jebel Ali, UAE',
-    eta: '22 Nov 2026',
-    etb: '23 Nov 2026',
-    etd: '25 Nov 2026',
-    remarks: 'FFV in progress',
-  },
-  {
-    id: 5,
-    srNo: 5,
-    vesselName: 'HAPAG LLOYD EUROPA',
-    port: 'Port Rashid, Dubai',
-    eta: '25 Nov 2026',
-    etb: '26 Nov 2026',
-    etd: '28 Nov 2026',
-    remarks: 'Awaiting confirmation',
-  },
-  {
-    id: 6,
-    srNo: 6,
-    vesselName: 'ONE HARMONY',
-    port: 'Jebel Ali, UAE',
-    eta: '28 Nov 2026',
-    etb: '29 Nov 2026',
-    etd: '01 Dec 2026',
-    remarks: 'Dairy confirmed',
-  },
-];
+const initialData: EtaEntry[] = [];
 
 export default function EtaInfo() {
   const [data, setData] = useState<EtaEntry[]>(initialData);
@@ -179,7 +118,7 @@ export default function EtaInfo() {
                     ETA - ETB - ETD
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider border-r border-white/10">
-                    REMARKS
+                    REMARKS (Confirm for FFV, Bread &amp; Dairy arrangement)
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider">
                     ACTION
@@ -205,8 +144,8 @@ export default function EtaInfo() {
                   <th className="px-4 py-2 text-center text-[10px] font-medium uppercase tracking-wider border-r border-white/10">
                     ETD
                   </th>
-                  <th className="px-4 py-2 text-center text-[10px] font-medium italic tracking-normal border-r border-white/10" colSpan={2}>
-                    (Confirm for FFV, Bread &amp; Dairy arrangement)
+                  <th className="px-4 py-2 text-left text-[10px] font-medium tracking-normal border-r border-white/10" colSpan={2}>
+                    &nbsp;
                   </th>
                 </tr>
               </thead>
