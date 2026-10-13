@@ -371,10 +371,10 @@ export default function EtaInfo() {
   >([]);
   const [dispatchMode, setDispatchMode] = useState<'send' | 'display'>('send');
 
-  // Recipients — exactly as in the VBA reference macro
+  // Recipients — cleared for now (to be configured later)
   const RECIPIENTS = {
-    to: 'jebelali@oceanfair.com; fujairah@oceanfair.com; john@oceanfair.com',
-    cc: 'bhavesh@oceanfair.com; deep@oceanfair.com; desai@oceanfair.com; dispatch@oceanfair.com; ajay@oceanfair.com; dry@oceanfair.com; frozen@oceanfair.com; sunil@oceanfair.com; bilal@oceanfair.com; technical@oceanfair.com; akash@oceanfair.com; akshay@oceanfair.com',
+    to: '',
+    cc: '',
   };
 
   // Port → color class map (mirrors VBA)
@@ -488,16 +488,29 @@ export default function EtaInfo() {
   };
 
   const buildEmailBodyHtml = () => {
-    // ----- Mirrors the VBA HTML body: turquoise header row, light-blue content box, styled paragraphs -----
+    // ----- Exact replica of the VBA htmlBody: same <html>/<head>/<style>/<body> structure & styles -----
     const tableHtml = buildEtaTableHtml();
-    return `
-      <div style="margin:0 auto;background-color:lightblue;padding:20px;font-family:Arial,sans-serif;">
-        <h1 style="color:#8B0000;font-size:25pt;font-family:'Kristen ITC','Times New Roman',serif;margin:0 0 10px;">Vessel Schedule Update</h1>
-        <p style="color:#FF00FF;line-height:1.4;font-family:'Times New Roman',serif;font-size:15pt;margin:5px 0;">Dear Team,</p>
-        <p style="color:#FF00FF;line-height:1.4;font-family:'Times New Roman',serif;font-size:15pt;margin:5px 0 15px;">Please advise the exact <b>ETA</b> for the below vessels with <b>REMARKS</b> to enable us to arrange the fresh items accordingly.</p>
-        ${tableHtml}
-      </div>
-    `;
+    return `<html>
+<head>
+<style>
+body {margin:0; padding:0px; background-color:#f5f7fa;}
+.email-container { margin:0 auto;}
+.email-content {background-color:lightblue; padding:0px; border-radius:0px; box-shadow: 0px 1px rgba(0,0,0,0.05);}
+h1 {color:#2c3e50; font-size:25pt;font-family:'Kristen ITC', 'Times New Roman', 'Times New Roman'; margin-bottom:0px;}
+p {color:#FF00FF; line-height:1; font-family:'Times New Roman';font-size:15pt; margin:5px 0;}
+</style>
+</head>
+<body>
+<div class='email-container'>
+<div class='email-content'>
+<h1 style='color: #8B0000;'>Vessel Schedule Update</h1>
+<p>Dear Team,</p>
+<p>Please advise the exact <b> ETA </b> for the below vessels with <b>REMARKS</b> to enable us to arrange the fresh items accordingly.</p>
+${tableHtml}
+</div>
+</div>
+</body>
+</html>`;
   };
 
   const getSubjectLine = () => {
@@ -535,26 +548,21 @@ export default function EtaInfo() {
   };
 
   const buildFullHtmlEmail = () => {
-    const bodyHtml = buildEtaTableHtml(); // table only — greeting & heading are added by the email client form
+    // ----- Full document exactly as VBA: htmlBody (with heading, greeting & table) wrapped in body/html tags -----
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<style>
-  body{margin:0;padding:0;background-color:#f5f7fa;font-family:Arial,sans-serif;}
-</style>
 </head>
-<body>${bodyHtml}</body>
+<body>${buildEmailBodyHtml()}</body>
 </html>`;
   };
 
   const buildMailtoLink = (subject: string) => {
-    // Properly construct mailto URL to avoid subject leaking into CC
-    const toPart = RECIPIENTS.to || '';
+    // Properly construct mailto URL to avoid subject leaking into CC (recipients cleared for now)
     const params = new URLSearchParams();
-    if (RECIPIENTS.cc) params.set('cc', RECIPIENTS.cc);
     params.set('subject', subject);
-    return `mailto:${toPart}?${params.toString()}`;
+    return `mailto:?${params.toString()}`;
   };
 
   const openEmailWithCopyButton = (subject: string) => {
@@ -636,7 +644,7 @@ export default function EtaInfo() {
     const htmlEmail = buildFullHtmlEmail();
     
     // Create .eml file format (MIME format for email)
-    const emlContent = `From: Oceanfair Operations <dispatch@oceanfair.com>
+    const emlContent = `From: 
 To: ${RECIPIENTS.to || ''}
 CC: ${RECIPIENTS.cc || ''}
 Subject: ${subject}
@@ -685,16 +693,8 @@ ${htmlEmail}`;
   };
 
   const openEmailPreviewWindow = (subject: string) => {
-    const bodyHtml = buildEmailBodyHtml();
-    const fullDoc = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#eef2f7;padding:30px 15px;font-family:'Inter',Arial,sans-serif;}
-</style></head><body>
-  <div style="max-width:860px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(6,24,43,0.18);font-family:'Inter',Arial,sans-serif;border:1px solid rgba(212,175,55,0.25);">${bodyHtml}</div>
-</body></html>`;
+    // Exact VBA htmlBody — opened as a standalone document, just like Outlook's .Display
+    const fullDoc = buildEmailBodyHtml();
     const w = window.open('', '_blank', 'width=960,height=800,scrollbars=yes,resizable=yes');
     if (w) {
       w.document.open();
@@ -1485,11 +1485,13 @@ ${htmlEmail}`;
                   </div>
                 </div>
 
-                {/* Email Body */}
-                <div className="max-h-[600px] overflow-y-auto">
-                  <div
-                    className="email-preview-content"
-                    dangerouslySetInnerHTML={{ __html: buildEmailBodyHtml() }}
+                {/* Email Body — exact VBA htmlBody format */}
+                <div className="max-h-[600px] overflow-y-auto bg-[#f5f7fa]">
+                  <iframe
+                    title="Email Body Preview"
+                    srcDoc={buildEmailBodyHtml()}
+                    className="w-full h-[500px] border-0 bg-white"
+                    sandbox="allow-same-origin"
                   />
                 </div>
               </div>
