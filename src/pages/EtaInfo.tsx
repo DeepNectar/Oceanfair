@@ -371,10 +371,10 @@ export default function EtaInfo() {
   >([]);
   const [dispatchMode, setDispatchMode] = useState<'send' | 'display'>('send');
 
-  // Recipients — leave blank for now (user will provide later)
+  // Recipients — exactly as in the VBA reference macro
   const RECIPIENTS = {
-    to: '',
-    cc: '',
+    to: 'jebelali@oceanfair.com; fujairah@oceanfair.com; john@oceanfair.com',
+    cc: 'bhavesh@oceanfair.com; deep@oceanfair.com; desai@oceanfair.com; dispatch@oceanfair.com; ajay@oceanfair.com; dry@oceanfair.com; frozen@oceanfair.com; sunil@oceanfair.com; bilal@oceanfair.com; technical@oceanfair.com; akash@oceanfair.com; akshay@oceanfair.com',
   };
 
   // Port → color class map (mirrors VBA)
@@ -407,15 +407,18 @@ export default function EtaInfo() {
       );
       return;
     }
-    // Populate email rows from current data
-    const rows = data.map((d) => ({
-      sr: d.srNo,
-      vessel: d.vesselName,
-      port: d.port,
-      eta: d.etaEtbEtd,
-      remarks: d.remarks,
-    }));
+    // Populate email rows from current data (only rows with an SR# — like VBA skips empty col A)
+    const rows = data
+      .filter((d) => d.srNo !== undefined && d.srNo !== null && String(d.srNo) !== '')
+      .map((d) => ({
+        sr: d.srNo,
+        vessel: d.vesselName,
+        port: d.port,
+        eta: d.etaEtbEtd,
+        remarks: d.remarks,
+      }));
     setEmailRows(rows);
+    setDispatchMode('display'); // mirrors VBA ".Display" behaviour
     setIsEmailModalOpen(true);
   };
 
@@ -447,53 +450,53 @@ export default function EtaInfo() {
   };
 
   const buildEtaTableHtml = () => {
+    // ----- Replicates the VBA table builder exactly (inline styles, borders, port colors) -----
     if (!emailRows.length) {
-      return '<p style="text-align:center;color:#94a3b8;font-style:italic;padding:20px 0;font-family:Inter,sans-serif;font-size:13px;">No ETA rows available.</p>';
+      return '<p style="text-align:center;color:#94a3b8;font-style:italic;padding:20px 0;font-family:Arial,sans-serif;">No ETA rows available.</p>';
     }
-    let html = '<div style="border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(6,24,43,0.12);border:1px solid rgba(212,175,55,0.3);background:white;margin-bottom:8px;"><table style="border-collapse:collapse;width:100%;font-family:Inter,Arial,sans-serif;"><thead><tr style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 100%);color:#f0d878;">';
-    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">SR#</th>';
-    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">VESSEL NAME</th>';
-    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">PORT</th>';
-    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;border-right:1px solid rgba(212,175,55,0.2);">ETA · ETB · ETD</th>';
-    html += '<th style="padding:15px 12px;text-align:center;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;">REMARKS<span style="display:block;font-size:0.62rem;font-weight:500;letter-spacing:0.08em;color:rgba(203,213,225,0.75);text-transform:none;margin-top:4px;line-height:1.4;">Confirm for FFV, Bread &amp; Dairy arrangement</span></th>';
+
+    const cellPad = 'padding:6px 12px;border:6px solid #E0E0E0;';
+    const thStyle = 'padding:12px 8px;border:6px solid #E0E0E0;text-align:center;';
+
+    let html = "<table style='border-collapse: collapse; font-family: Arial, sans-serif;'>";
+    html += '<thead><tr style="background-color:#40E0D0;color:#FF00FF;">';
+    html += `<th style='${thStyle}'>SR#</th>`;
+    html += `<th style='${thStyle}'>VESSEL NAME</th>`;
+    html += `<th style='${thStyle}'>PORT</th>`;
+    html += `<th style='${thStyle}'>ETA-ETB-ETD</th>`;
+    html += `<th style='${thStyle}'>REMARKS<br>(Confirm for FFV, Bread &amp; <br> Dairy arrangement)</th>`;
     html += '</tr></thead><tbody>';
-    emailRows.forEach((row, idx) => {
-      const portUpper = (row.port || '').toString().toUpperCase();
-      const portColor = PORT_COLOR_MAP[portUpper] || '#263238';
-      const bg = idx % 2 === 1 ? '#fcfbf8' : 'transparent';
-      html += `<tr style="background:${bg};">`;
-      html += `<td style="padding:14px;text-align:center;font-weight:700;color:#d4af37;font-size:0.82rem;background:${idx % 2 === 1 ? '#f7f4e8' : '#fbfaf5'};width:54px;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(String(row.sr))}</td>`;
-      html += `<td style="padding:14px;font-size:0.84rem;color:#1e2e3f;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;font-weight:700;color:#0b2b4a;">${escapeHtml(row.vessel)}</td>`;
-      html += `<td style="padding:14px;text-align:center;font-weight:700;font-size:0.78rem;letter-spacing:0.04em;color:${portColor};border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(row.port)}</td>`;
-      html += `<td style="padding:14px;text-align:center;font-weight:600;color:#0b2b4a;font-size:0.8rem;font-family:Inter,monospace;letter-spacing:0.01em;border-bottom:1px solid #eef2f7;border-right:1px solid #f1f5f9;">${escapeHtml(row.eta)}</td>`;
-      html += `<td style="padding:14px;text-align:center;font-size:0.82rem;color:#3e5f7a;font-weight:500;border-bottom:1px solid #eef2f7;">${escapeHtml(row.remarks)}</td>`;
+
+    emailRows.forEach((row) => {
+      // Skip rows with empty SR# — same as VBA "If Not IsEmpty(rng.Cells(i,1).Value)"
+      if (String(row.sr) === '') return;
+
+      const portUpper = (row.port || '').toString().trim().toUpperCase();
+      const portColor = PORT_COLOR_MAP[portUpper] || '#263238'; // VBA Else branch color
+
+      html += '<tr>';
+      html += `<td style='${cellPad}text-align:center;font-weight:bold;'>${escapeHtml(String(row.sr))}</td>`;
+      html += `<td style='${cellPad}font-weight:bold;'>${escapeHtml(row.vessel)}</td>`;
+      html += `<td style='${cellPad}text-align:center;font-weight:bold;color:${portColor};'>${escapeHtml(row.port)}</td>`;
+      html += `<td style='${cellPad}text-align:center;font-weight:bold;color:black;'>${escapeHtml(row.eta)}</td>`;
+      html += `<td style='${cellPad}text-align:center;font-weight:bold;'>${escapeHtml(row.remarks)}</td>`;
       html += '</tr>';
     });
-    html += '</tbody></table></div>';
+
+    html += '</tbody></table>';
     return html;
   };
 
   const buildEmailBodyHtml = () => {
+    // ----- Mirrors the VBA HTML body: turquoise header row, light-blue content box, styled paragraphs -----
     const tableHtml = buildEtaTableHtml();
     return `
-      <div style="background:linear-gradient(135deg,#0b2b4a 0%,#123e63 50%,#0b2b4a 100%);padding:38px 40px 32px;position:relative;overflow:hidden;border-bottom:4px solid #d4af37;text-align:center;">
-        <div style="position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(212,175,55,0.18),transparent 65%);border-radius:50%;pointer-events:none;"></div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:32pt;font-weight:800;color:#ffffff;letter-spacing:-0.015em;line-height:1.05;margin:0 0 10px;position:relative;z-index:1;">Vessel <span style="background:linear-gradient(120deg,#f0d878 0%,#d4af37 100%);-webkit-background-clip:text;background-clip:text;color:transparent;">Schedule</span> Update</h1>
-        <div style="font-size:11px;letter-spacing:0.32em;color:rgba(240,216,120,0.85);text-transform:uppercase;font-weight:600;position:relative;z-index:1;">ETA · ETB · ETD Notification</div>
-      </div>
-      <div style="padding:34px 40px 36px;background:#fbfaf7;font-family:'Cormorant Garamond','Times New Roman',serif;">
-        <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#0b2b4a;margin-bottom:12px;letter-spacing:-0.01em;">Dear Team,</div>
-        <p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#3e5f7a;margin-bottom:26px;font-weight:400;">
-          Please advise the exact <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">ETA</b> for the below vessels with <b style="color:#0b2b4a;font-weight:600;background:linear-gradient(180deg,transparent 60%,rgba(212,175,55,0.25) 60%);padding:0 2px;">REMARKS</b> to enable us to arrange the fresh items accordingly.
-        </p>
-        <div style="display:flex;align-items:center;gap:14px;margin:24px 0 22px;">
-          <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent);"></div>
-          <span style="color:#d4af37;font-size:10px;letter-spacing:0.4em;">◆ ◆ ◆</span>
-          <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent);"></div>
-        </div>
+      <div style="margin:0 auto;background-color:lightblue;padding:20px;font-family:Arial,sans-serif;">
+        <h1 style="color:#8B0000;font-size:25pt;font-family:'Kristen ITC','Times New Roman',serif;margin:0 0 10px;">Vessel Schedule Update</h1>
+        <p style="color:#FF00FF;line-height:1.4;font-family:'Times New Roman',serif;font-size:15pt;margin:5px 0;">Dear Team,</p>
+        <p style="color:#FF00FF;line-height:1.4;font-family:'Times New Roman',serif;font-size:15pt;margin:5px 0 15px;">Please advise the exact <b>ETA</b> for the below vessels with <b>REMARKS</b> to enable us to arrange the fresh items accordingly.</p>
         ${tableHtml}
       </div>
-      <div style="height:6px;background:linear-gradient(90deg,#0b2b4a 0%,#d4af37 50%,#0b2b4a 100%);"></div>
     `;
   };
 
@@ -532,15 +535,13 @@ export default function EtaInfo() {
   };
 
   const buildFullHtmlEmail = () => {
-    const bodyHtml = buildEmailBodyHtml();
+    const bodyHtml = buildEtaTableHtml(); // table only — greeting & heading are added by the email client form
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#ffffff;padding:0;font-family:'Inter',Arial,sans-serif;}
+  body{margin:0;padding:0;background-color:#f5f7fa;font-family:Arial,sans-serif;}
 </style>
 </head>
 <body>${bodyHtml}</body>
