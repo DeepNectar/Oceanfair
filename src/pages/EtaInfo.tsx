@@ -369,7 +369,44 @@ export default function EtaInfo() {
   const [emailRows, setEmailRows] = useState<
     { sr: number; vessel: string; port: string; eta: string; remarks: string }[]
   >([]);
-  const [dispatchMode, setDispatchMode] = useState<'send' | 'display'>('send');
+  // ----- Clipboard helpers: copy rich-text (styled) HTML so it can be pasted into Outlook -----
+  const writeRichHtmlToClipboard = async (htmlFragment: string): Promise<boolean> => {
+    const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${htmlFragment}</body></html>`;
+
+    // Modern path: ClipboardItem (preserves formatting when pasted into Outlook/Gmail)
+    if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+      try {
+        const item = new ClipboardItem({
+          'text/html': new Blob([fullDoc], { type: 'text/html' }),
+          'text/plain': new Blob([htmlFragment.replace(/<[^>]+>/g, '')], { type: 'text/plain' }),
+        });
+        await navigator.clipboard.write([item]);
+        return true;
+      } catch {
+        /* fall through to legacy path */
+      }
+    }
+
+    // Legacy fallback: select rendered nodes and execCommand('copy')
+    try {
+      const holder = document.createElement('div');
+      holder.style.position = 'fixed';
+      holder.style.left = '-9999px';
+      holder.innerHTML = htmlFragment;
+      document.body.appendChild(holder);
+      const range = document.createRange();
+      range.selectNodeContents(holder);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      const ok = document.execCommand('copy');
+      sel?.removeAllRanges();
+      document.body.removeChild(holder);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
 
   // Recipients — cleared for now (to be configured later)
   const RECIPIENTS = {
@@ -418,7 +455,6 @@ export default function EtaInfo() {
         remarks: d.remarks,
       }));
     setEmailRows(rows);
-    setDispatchMode('display'); // mirrors VBA ".Display" behaviour
     setIsEmailModalOpen(true);
   };
 
@@ -547,17 +583,6 @@ ${tableHtml}
     return text;
   };
 
-  const buildFullHtmlEmail = () => {
-    // ----- Full document exactly as VBA: htmlBody (with heading, greeting & table) wrapped in body/html tags -----
-    return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-</head>
-<body>${buildEmailBodyHtml()}</body>
-</html>`;
-  };
-
   const buildMailtoLink = (subject: string) => {
     // Properly construct mailto URL to avoid subject leaking into CC (recipients cleared for now)
     const params = new URLSearchParams();
@@ -565,145 +590,42 @@ ${tableHtml}
     return `mailto:?${params.toString()}`;
   };
 
-  const openEmailWithCopyButton = (subject: string) => {
-    const htmlEmail = buildFullHtmlEmail();
-    const mailtoLink = buildMailtoLink(subject);
-    
-    const emailWindow = window.open('', '_blank', 'width=960,height=800,scrollbars=yes,resizable=yes');
-    
-    if (emailWindow) {
-      // Create HTML with a copy button
-      const fullHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${escapeHtml(subject)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#eef2f7;padding:20px;font-family:'Inter',Arial,sans-serif;}
-  .toolbar{max-width:860px;margin:0 auto 20px;display:flex;gap:10px;justify-content:center;}
-  .btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:all 0.2s;}
-  .btn-copy{background:linear-gradient(135deg,#d4af37,#b8942a);color:#0b2b4a;box-shadow:0 4px 12px rgba(212,175,55,0.3);}
-  .btn-copy:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(212,175,55,0.4);}
-  .btn-open{background:#0b2b4a;color:#f0d878;box-shadow:0 4px 12px rgba(11,43,74,0.3);}
-  .btn-open:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(11,43,74,0.4);}
-  .email-content{max-width:860px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(6,24,43,0.18);border:1px solid rgba(212,175,55,0.25);}
-  .instructions{max-width:860px;margin:20px auto 0;padding:16px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;text-align:center;font-size:14px;color:#856404;}
-  .instructions b{color:#0b2b4a;}
-</style>
-</head>
-<body>
-  <div class="toolbar">
-    <button class="btn btn-copy" onclick="copyEmail()">📋 Copy Email to Clipboard</button>
-    <button class="btn btn-open" onclick="openEmailClient()">✉ Open Email Client</button>
-  </div>
-  <div class="instructions">
-    <b>Step 1:</b> Click "Copy Email to Clipboard" &nbsp;|&nbsp; <b>Step 2:</b> Click "Open Email Client" &nbsp;|&nbsp; <b>Step 3:</b> Paste (Ctrl+V / Cmd+V) in your email body
-  </div>
-  <div class="email-content" id="emailContent">${htmlEmail}</div>
-  <script>
-    function copyEmail() {
-      const emailContent = document.getElementById('emailContent');
-      const range = document.createRange();
-      range.selectNodeContents(emailContent);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      
-      try {
-        document.execCommand('copy');
-        alert('✓ Email copied to clipboard! Now click "Open Email Client" and paste (Ctrl+V).');
-      } catch (err) {
-        alert('Copy failed. Please manually select all content (Ctrl+A) and copy (Ctrl+C).');
-      }
-      
-      selection.removeAllRanges();
-    }
-    
-    function openEmailClient() {
-      window.location.href = '${mailtoLink}';
-    }
-  </script>
-</body>
-</html>`;
-      
-      emailWindow.document.open();
-      emailWindow.document.write(fullHtml);
-      emailWindow.document.close();
-      emailWindow.document.title = subject;
-      
-      showNotification('success', 'Email window opened! Follow the 3 steps to send.');
-    } else {
-      showNotification('error', 'Popup blocked. Please allow popups to open the email.');
-    }
-  };
-
-  const downloadEmlFile = (subject: string) => {
-    const htmlEmail = buildFullHtmlEmail();
-    
-    // Create .eml file format (MIME format for email)
-    const emlContent = `From: 
-To: ${RECIPIENTS.to || ''}
-CC: ${RECIPIENTS.cc || ''}
-Subject: ${subject}
-Date: ${new Date().toUTCString()}
-MIME-Version: 1.0
-Content-Type: text/html; charset="UTF-8"
-
-${htmlEmail}`;
-
-    // Create blob and download
-    const blob = new Blob([emlContent], { type: 'message/rfc822' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ETA_Info_${new Date().toISOString().split('T')[0]}.eml`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
-  };
-
-  const dispatchEmail = () => {
+  const dispatchEmail = async () => {
     if (!emailRows.length) {
       showNotification('error', 'No ETA rows to send. Click "Load Sample Rows" or add entries first.');
       return;
     }
     const subject = getSubjectLine();
-    
-    if (dispatchMode === 'display') {
-      // Open & Display mode - opens HTML preview window
-      openEmailPreviewWindow(subject);
-      showNotification('success', 'Email opened in Display mode — review & send manually.');
+
+    // Copy the fully-styled HTML body (exact VBA format) to the clipboard as rich text
+    const copied = await writeRichHtmlToClipboard(buildEmailBodyHtml());
+
+    // Open Outlook / default mail client with a new draft (same behaviour as VBA .Display).
+    // NOTE: browsers cannot inject HTML bodies into Outlook directly (mailto is plain-text
+    // only), so the styled body arrives via the clipboard — just paste with Ctrl+V.
+    window.location.href = buildMailtoLink(subject);
+
+    if (copied) {
+      showNotification(
+        'success',
+        '✓ Styled email copied to clipboard & Outlook draft opened — press Ctrl+V in the message body.'
+      );
     } else {
-      // Send Directly mode - downloads .eml file that opens in default email client with HTML
-      setIsEmailModalOpen(false);
-      
-      setTimeout(() => {
-        downloadEmlFile(subject);
-        showNotification('success', '✓ Email file downloaded! It will open automatically in your default email app with full HTML formatting.');
-      }, 300);
+      showNotification(
+        'success',
+        'Outlook draft opened. If the auto-copy failed, use "Copy Formatted Email" below and then paste (Ctrl+V).'
+      );
     }
   };
 
-  const openEmailPreviewWindow = (subject: string) => {
-    // Exact VBA htmlBody — opened as a standalone document, just like Outlook's .Display
-    const fullDoc = buildEmailBodyHtml();
-    const w = window.open('', '_blank', 'width=960,height=800,scrollbars=yes,resizable=yes');
-    if (w) {
-      w.document.open();
-      w.document.write(fullDoc);
-      w.document.close();
-      w.document.title = subject;
-    } else {
-      showNotification('error', 'Popup blocked. Please allow popups to preview the email.');
-    }
+  const copyFormattedEmail = async () => {
+    const copied = await writeRichHtmlToClipboard(buildEmailBodyHtml());
+    showNotification(
+      copied ? 'success' : 'error',
+      copied
+        ? '✓ Email copied with full formatting — paste it (Ctrl+V) into your Outlook draft.'
+        : 'Copy failed. Please allow clipboard access in your browser settings and try again.'
+    );
   };
 
   // Build preview grouped list
@@ -1414,39 +1336,25 @@ ${htmlEmail}`;
               </button>
             </div>
 
-            {/* Mode Selector Chips */}
+            {/* Toolbar */}
             <div className="bg-[#0a1a2f]/50 px-6 py-3 flex flex-wrap items-center gap-3 border-b border-[#D4A843]/10">
-              <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#06182b]/70 border border-[#D4A843]/20">
-                <button
-                  onClick={() => setDispatchMode('send')}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                    dispatchMode === 'send'
-                      ? 'bg-gradient-to-r from-[#D4A843] to-[#b8942a] text-[#0B1D3A] shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${dispatchMode === 'send' ? 'bg-[#0B1D3A]' : 'bg-current'}`}></span>
-                  Send Directly
-                </button>
-                <button
-                  onClick={() => setDispatchMode('display')}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                    dispatchMode === 'display'
-                      ? 'bg-gradient-to-r from-[#D4A843] to-[#b8942a] text-[#0B1D3A] shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${dispatchMode === 'display' ? 'bg-[#0B1D3A]' : 'bg-current'}`}></span>
-                  Open &amp; Display
-                </button>
-              </div>
+              <span className="text-blue-200 text-xs font-semibold inline-flex items-center gap-2">
+                <i className="fa-solid fa-envelope-open-text text-[#D4A843]"></i>
+                Opens a new Outlook draft (like VBA .Display) — styled body is copied to clipboard automatically
+              </span>
 
               {/* Toolbar Buttons */}
               <button
-                onClick={dispatchEmail}
-                className="bg-gradient-to-r from-[#D4A843] to-[#b8942a] hover:from-[#e5c452] hover:to-[#D4A843] text-[#0B1D3A] font-bold px-5 py-2.5 rounded-lg shadow-lg transition-all flex items-center gap-2 ml-auto"
+                onClick={copyFormattedEmail}
+                className="bg-white/5 hover:bg-white/10 text-white border border-white/20 hover:border-[#D4A843]/40 px-4 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-semibold ml-auto"
               >
-                <span>✉</span> {dispatchMode === 'send' ? 'Send Email' : 'Open & Display'}
+                <i className="fa-solid fa-copy"></i> Copy Formatted Email
+              </button>
+              <button
+                onClick={dispatchEmail}
+                className="bg-gradient-to-r from-[#D4A843] to-[#b8942a] hover:from-[#e5c452] hover:to-[#D4A843] text-[#0B1D3A] font-bold px-5 py-2.5 rounded-lg shadow-lg transition-all flex items-center gap-2"
+              >
+                <span>✉</span> Open in Outlook
               </button>
               <button
                 onClick={loadSampleEmailRows}
